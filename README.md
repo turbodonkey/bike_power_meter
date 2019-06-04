@@ -5,9 +5,9 @@ This is a small project based on the [sparkfun nrf52480 mini](https://www.sparkf
 Also note, this project will require a programmer to program the Softdevice. To the best of my knowledge (and attempts) you cannot program the s340 softdevice without a programmer. I used the cheap [educational segger mini](https://www.segger.com/products/debug-probes/j-link/models/j-link-edu-mini/) if you are looking for a recommendation.
 
 As ANT+ requires a license and registration as a developer, this project does not provide two crucial elements to make this successful;
-1. You need the Softdevice s340 to operate ANT on the nRF52480. This is ONLY available through thisisant.com.
+1. You need the Softdevice s340 to operate ANT on the nRF52480. This is ONLY available through [thisisant.com](thisisant.com).
 2. You need the ANT+ Network Num and set it in the project under #define ANTPLUS_NETWORK_NUM.
-Again this is ONLY available through registration and developer license agreement at thisisant.com. They are freely available behind the registration and license acceptance process. Note: You cannot distrubute these, and can only be used for educational, not-for-profit projects... exactly like this one.
+Again this is ONLY available through registration and developer license agreement at [thisisant.com](thisisant.com). They are freely available behind the registration and license acceptance process. Note: You cannot distrubute these, and can only be used for educational, not-for-profit projects... exactly like this one.
 
 To map the Speed in m/s to the Power rating I used a simple quadratic that mirrored some [engineering work here](https://www.gribble.org/cycling/power_v_speed.html). Improvements need to be made here I suspect. I will link the function to desmos in another update.
 
