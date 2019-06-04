@@ -1,1 +1,11 @@
 # bike_power_meter
+
+This is a small little hack board based on the sparkfun nrf52480 mini (https://www.sparkfun.com/products/15025) which is based on Nordic Semiconductor's nRF52480 chip (https://www.nordicsemi.com/?sc_itemid=%7B2DC10BA5-A76E-40F8-836E-E2FC65803A71%7D). This project can be used to implement any bike which provides a digital hall effect trigger for cadence and analogue signal for resistance / gear. Based on these inputs an ANT+ PWR and ANT+ SPD sensor can be developed using the awesome nRF52480 chip.
+
+Also note, this project will require a programmer to program the Softdevice. To the best of my knowledge (and attempts) you cannot program the S340 softdevice without a programmer. I used the cheap educational segger mini if you are looking for a recommendation (https://www.segger.com/products/debug-probes/j-link/models/j-link-edu-mini/).
+
+As ANT+ requires a license and registration as a developer, this project does not provide two crucial elements to make this successful; 1. You need the Softdevice 340 to operate ANT on the nRF52480. This is ONLY available through thisisant.com. 2. You need the ANT+ Network Num and set it in the project under #define ANTPLUS_NETWORK_NUM. Again this is ONLY available through registration and developer license agreement at thisisant.com. They are freely available behind the registration and license acceptance process. Note: You cannot distrubute these, and can only be used for educational, not-for-profit projects... exactly like this one.
+
+To map the Speed in m/s to the Power rating I used a simple quadratic that mirrored the https://www.gribble.org/cycling/power_v_speed.html. Improvements need to be made here I suspect. I will link the function to desmos in another update.
+
+Calibration of the PWR curve is a hack at best until I get access to something better to qualify it. The calibration and auto-calibration feature of ANT+ PWR is not implemented, so this is another area of work. However I have set a table to reflect ADC values against PWR based on the bike I used, an older Keiser M3 spin bike (which my model is not for sale anymore but latest models are here - not even the latest models talk ANT+ natively (https://www.keiser.com/fitness-equipment/cardio-training/m3i-indoor-cycle).
