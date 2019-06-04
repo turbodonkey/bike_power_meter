@@ -17,8 +17,8 @@ The project utilises the latest nRF5 SDK which at the time of authoring is 15.3.
 
 Finally this project has served my purpose very well, it registers both the Power and Cadence as an ANT+ PWR profile (Channel 0) and also provides Speed as an ANT+ SPD profile (Channel 1). This coupled with a ANT+ HRM (outside the scope of this project) and I was able to register it all on my Garmin Forerunner 935 watch (https://buy.garmin.com/en-AU/AU/p/564291). All whilst being able to Zwift at the same time using my computer with ANT+ USB dongle. Note: iOS and Android devices are not supported at this stage as I have not implemented the Bluetooth stack.
 
-I upload the work in the hope that others will share and extend this work mainly in two areas I'd like to encourage;
-1. Enhancements to calibration and quality of authentic PWR and SPD.
+I upload the work in the hope that others will share and extend this work mainly in these areas I'd like to encourage;
+1. Enhancements to calibration (auto-calibration functionality) and quality of authentic PWR and SPD values.
 2. Leverage Bluetooth stack - its available in the Softdevice s340 but I have built strickly ANT+. This will help with native sync to iOS and Android apps and also allow for functional project sharing out of the box without ANT+ license restrictions.
 3. The Ultimate Goal - ANT+ FE-C. This is a computer controlled spec and will require the project to implement a stepper motor to increment and decrement resistance requests based on connected computer. I consider this to be the ultimate end game which the community can use to implement a FE-C stack and upgrade many old spin bikes to FE-C.
 
