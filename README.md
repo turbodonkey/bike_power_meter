@@ -1,4 +1,4 @@
-# Upgrade your spin bike with an ANT+ Power Meter (PWR) and Speed sensor (SPD)
+# Upgrade your spin bike with an ANT+ Power Meter (PWR) and Speed (SPD) sensor
 
 This is a small little hack board based on the sparkfun nrf52480 mini (https://www.sparkfun.com/products/15025) which is based on Nordic Semiconductor's nRF52480 chip (https://www.nordicsemi.com/?sc_itemid=%7B2DC10BA5-A76E-40F8-836E-E2FC65803A71%7D). This project can be used to implement any bike which provides a digital hall effect trigger for cadence and analogue signal for resistance / gear. Based on these inputs an ANT+ PWR and ANT+ SPD sensor can be developed using the awesome nRF52480 chip.
 
