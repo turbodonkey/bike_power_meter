@@ -104,8 +104,9 @@
     #error Unsupported value of MODIFICATION_TYPE.
 #endif
 
-#define HALL_EFFECT_PIN_IN NRF_GPIO_PIN_MAP(0, 23)
+//#define HALL_EFFECT_PIN_IN NRF_GPIO_PIN_MAP(0, 23)
 #define HALL_EFFECT_BTN 1 // BUTTON_2 is position 1 in BUTTONS_LIST in board header file.
+#define HALL_EFFECT_PIN_IN BUTTON_2
 
 #if NRF_PWR_MGMT_CONFIG_USE_SCHEDULER
 #include "app_scheduler.h"
@@ -113,17 +114,24 @@
 #define APP_SCHED_QUEUE_SIZE        4   /**< Maximum number of events in the scheduler queue. */
 #endif // NRF_PWR_MGMT_CONFIG_USE_SCHEDULER
 
-#define SAMPLES_IN_BUFFER 1
-volatile uint8_t state = 1;
+#define SAMPLES_IN_BUFFER 8
+volatile uint8_t STATE = 0;
 
 uint8_t GEAR = 1;
 uint8_t CADENCE = 0;
 float SPEED = 0.0;
 uint16_t POWER = 0;
+//static uint32_t PTIME = 0;
 static uint32_t CADENCE_NUMERATOR = APP_TIMER_TICKS(120000);
+//uint16_t ADC_LOW = 243; //based on testing
+//uint16_t ADC_HIGH = 403; //based on testing
+uint16_t ADC_LOW = 350; //based on testing
+uint16_t ADC_HIGH = 550; //based on testing
 
 static const nrf_drv_timer_t m_timer = NRF_DRV_TIMER_INSTANCE(1);
-APP_TIMER_DEF(m_idle_timer_id); //rpm cadence timer
+APP_TIMER_DEF(m_idle_timer_id); //idle timer
+APP_TIMER_DEF(m_cadence_timer_id); //cadence timer
+//APP_TIMER_DEF(m_fake_pedal_timer_id); //for debugging
 static uint8_t               m_idle_timer_ctr = 0;
 static nrf_saadc_value_t     m_buffer_pool[2][SAMPLES_IN_BUFFER];
 static nrf_ppi_channel_t     m_ppi_channel;
@@ -184,56 +192,57 @@ static volatile bool m_sysoff_started;  /**< True if the application started sle
 // gear selector given noisy adc only sets gear if clear indication
 uint8_t gear_selecta(uint16_t adc_value)
 {
-    if (adc_value <= 55) {
+    if (adc_value <= 46) {
         return (1);
-    } else if (adc_value >= 59 && adc_value <= 88) {
+    } else if (adc_value >= 48 && adc_value <= 87) {
         return (2);
-    } else if (adc_value >= 96 && adc_value <= 135) {
+    } else if (adc_value >= 91 && adc_value <= 131) {
         return (3);
-    } else if (adc_value >= 130 && adc_value <= 140) {
+    } else if (adc_value >= 135 && adc_value <= 150) {
         return (4);
-    } else if (adc_value >= 145 && adc_value <= 151) {
+    } else if (adc_value >= 158 && adc_value <= 161) {
         return (5);
-    } else if (adc_value >= 153 && adc_value <= 163) {
+    } else if (adc_value >= 164 && adc_value <= 169) {
         return (6);
-    } else if (adc_value >= 166 && adc_value <= 175) {
+    } else if (adc_value >= 171 && adc_value <= 182) {
         return (7);
-    } else if (adc_value >= 181 && adc_value <= 189) {
+    } else if (adc_value >= 187 && adc_value <= 200) {
         return (8);
-    } else if (adc_value >= 191 && adc_value <= 202) {
+    } else if (adc_value >= 205 && adc_value <= 214) {
         return (9);
-    } else if (adc_value >= 205 && adc_value <= 212) {
+    } else if (adc_value >= 219 && adc_value <= 224) {
         return (10);
-    } else if (adc_value >= 218 && adc_value <= 229) {
+    } else if (adc_value >= 230 && adc_value <= 239) {
         return (11);
-    } else if (adc_value >= 232 && adc_value <= 241) {
+    } else if (adc_value >= 246 && adc_value <= 251) {
         return (12);
-    } else if (adc_value >= 243 && adc_value <= 249) {
+    } else if (adc_value >= 255 && adc_value <= 265) {
         return (13);
-    } else if (adc_value >= 263 && adc_value <= 269) {
+    } else if (adc_value >= 272 && adc_value <= 294) {
         return (14);
-    } else if (adc_value >= 273 && adc_value <= 292) {
+    } else if (adc_value >= 297 && adc_value <= 313) {
         return (15);
-    } else if (adc_value >= 298 && adc_value <= 306) {
+    } else if (adc_value >= 320 && adc_value <= 330) {
         return (16);
-    } else if (adc_value >= 325 && adc_value <= 334) {
+    } else if (adc_value >= 341 && adc_value <= 350) {
         return (17);
-    } else if (adc_value >= 338 && adc_value <= 354) {
+    } else if (adc_value >= 361 && adc_value <= 370) {
         return (18);
-    } else if (adc_value >= 372 && adc_value <= 380) {
+    } else if (adc_value >= 381 && adc_value <= 393) {
         return (19);
-    } else if (adc_value >= 380 && adc_value <= 407) {
+    } else if (adc_value >= 399 && adc_value <= 425) {
         return (20);
-    } else if (adc_value >= 414 && adc_value <= 430) {
+    } else if (adc_value >= 431 && adc_value <= 448) {
         return (21);
-    } else if (adc_value >= 436 && adc_value <= 453) {
+    } else if (adc_value >= 458 && adc_value <= 482) {
         return (22);
-    } else if (adc_value >= 473 && adc_value <= 505) {
+    } else if (adc_value >= 489 && adc_value <= 529) {
         return (23);
-    } else if (adc_value >= 510 && adc_value <= 550) {
+    } else if (adc_value >= 541 && adc_value <= 550) {
         return (24);
     } else {
-        return (0);
+        // dont adjust GEAR just leave it
+        return (GEAR);
     }
 }
 
@@ -319,12 +328,18 @@ void gear_cad_to_pwr_spd(void)
             default:
                 break;
         }
-        SPEED = 0.277778 * (pow((3980.0 * (float)POWER),(1.0/3.54)) - 12.2); // convert km/h to m/s
+        SPEED = (pow((75.0 * (float)POWER),(1.0/3.7)) - 4.8); // see power to m/s calculator
         if (SPEED < 0.0) { SPEED = 0.0; }
     } else {
         POWER = 0; SPEED = 0.0;
     }
-    //return;
+    //ant_bpwr_simulator_increment(&m_ant_bpwr_simulator);
+    m_ant_bpwr_simulator._cb.power_sensorsim_state.current_val = (uint32_t)POWER;
+    m_ant_bpwr_simulator._cb.cadence_sensorsim_state.current_val = (uint32_t)CADENCE;
+
+    //ant_bsc_simulator_increment(&m_ant_bsc_simulator);
+    m_ant_bsc_simulator._cb.sensorsim_s_state.current_val = (uint32_t)SPEED;
+    return;
 }
 
 /**@brief Handler for shutdown preparation.
@@ -376,33 +391,129 @@ bool shutdown_handler(nrf_pwr_mgmt_evt_t event)
 /**@brief Register application shutdown handler with priority 0. */
 NRF_PWR_MGMT_HANDLER_REGISTER(shutdown_handler, 0);
 
+/* only trigger the hall effect signal after a debounce time which calls this handler */
+static void cadence_timer_handler(void * p_context) {
+    uint32_t ctime = 0;//, stime = 0;
+    uint32_t tmp = 0;
+    
+    nrf_pwr_mgmt_feed();
+
+    m_pin_hldr_counter++;
+    ctime = app_timer_cnt_get();
+    /*stime = floor(ctime/APP_TIMER_TICKS(1000));
+
+    NRF_LOG_RAW_INFO("%d.%ds: cadence triggered %d\n", stime, \
+        (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1),\
+        m_pin_hldr_counter);
+    */
+    //if (ctime == 0) { NRF_LOG_INFO("ctime zero %d, RTC1 counter %d", ctime, NRF_RTC1->COUNTER); }
+
+    m_cadence_counter[m_cadence_position] = ctime;
+    m_cadence_position = (m_cadence_position + 1) % 3;
+    if (m_pin_hldr_counter > 2) {
+        tmp = app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+        //NRF_LOG_RAW_INFO("\tcadence rtc diff %d\n", tmp);
+        CADENCE = CADENCE_NUMERATOR / tmp;
+        gear_cad_to_pwr_spd();
+    }
+
+    ret_code_t err_code = app_timer_stop(m_idle_timer_id);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+/* set debounce timer if not active, else ignore */
+void hall_effect_in_pin_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+    /*uint32_t ctime = 0, stime = 0;
+
+    ctime = app_timer_cnt_get();
+    stime = floor(ctime/APP_TIMER_TICKS(1000));*/
+    STATE++;
+
+    /*
+    if (ctime == PTIME) {
+        NRF_LOG_RAW_INFO("%d.%ds: hall effect triggered, pin %d, double\n", stime, \
+            (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1), \
+            ((NRF_GPIO->IN & (1UL << HALL_EFFECT_PIN_IN)) != 0) ? 1 : 0);
+    } else {
+        NRF_LOG_RAW_INFO("%d.%ds: hall effect triggered, pin %d\n", stime, \
+            (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1), \
+            ((NRF_GPIO->IN & (1UL << HALL_EFFECT_PIN_IN)) != 0) ? 1 : 0);
+
+        ret_code_t err_code = app_timer_start(m_cadence_timer_id, APP_TIMER_TICKS(50), NULL);
+        APP_ERROR_CHECK(err_code);
+    }
+    PTIME = ctime;
+    */
+    if(STATE && (!(STATE % 2))) {
+        STATE = 0;
+        /*NRF_LOG_RAW_INFO("%d.%ds: hall effect triggered, pin %d\n", stime,
+            (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1),
+            ((NRF_GPIO->IN & (1UL << HALL_EFFECT_PIN_IN)) != 0) ? 1 : 0);*/
+
+        ret_code_t err_code = app_timer_start(m_cadence_timer_id, APP_TIMER_TICKS(50), NULL);
+        APP_ERROR_CHECK(err_code);
+    } else {
+        /*NRF_LOG_RAW_INFO("%d.%ds: hall effect triggered, pin %d, state change only\n", stime,
+            (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1),
+            ((NRF_GPIO->IN & (1UL << HALL_EFFECT_PIN_IN)) != 0) ? 1 : 0);*/
+    }
+}
+
+
+/**
+ * @brief Function for configuring: PIN_IN pin for input, PIN_OUT pin for output,
+ * and configures GPIOTE to give an interrupt on pin change.
+ */
+static void gpio_init(void)
+{
+    ret_code_t err_code;
+
+    err_code = nrf_drv_gpiote_init();
+    APP_ERROR_CHECK(err_code);
+
+    //nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+
+    err_code = nrf_drv_gpiote_in_init(HALL_EFFECT_PIN_IN, &in_config, hall_effect_in_pin_handler);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_gpiote_in_event_enable(HALL_EFFECT_PIN_IN, true);
+}
+
+
 /**@brief Function for handling bsp events.
  */
 /** @snippet [ANT BPWR simulator button] */
 void bsp_evt_handler(bsp_event_t event)
 {
-    uint32_t ctime = 0;
+    //uint32_t ctime = 0;
+    //uint32_t tmp = 0;
     
-    nrf_pwr_mgmt_feed();
+    //nrf_pwr_mgmt_feed();
 
     switch (event)
     {
-        case BSP_EVENT_KEY_1:
+        /*case BSP_EVENT_KEY_1:
             m_pin_hldr_counter++;
             ctime = app_timer_cnt_get();
+
+            NRF_LOG_RAW_INFO("%ds: hall effect triggered %d, %d\n", \
+                (NRF_RTC1->COUNTER)/APP_TIMER_TICKS(1000), ctime, m_pin_hldr_counter);
+            //if (ctime == 0) { NRF_LOG_INFO("ctime zero %d, RTC1 counter %d", ctime, NRF_RTC1->COUNTER); }
+
             m_cadence_counter[m_cadence_position] = ctime;
             m_cadence_position = (m_cadence_position + 1) % 3;
-            if (m_pin_hldr_counter > 1) {
-                CADENCE = CADENCE_NUMERATOR / \
-                    app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+            if (m_pin_hldr_counter > 2) {
+                tmp = app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+                NRF_LOG_RAW_INFO("hall effect rtc diff %d\n", tmp);
+                CADENCE = CADENCE_NUMERATOR / tmp;
+                gear_cad_to_pwr_spd();
             }
-
-            //ant_bpwr_simulator_increment(&m_ant_bpwr_simulator);
-            m_ant_bpwr_simulator._cb.power_sensorsim_state.current_val = (uint32_t)POWER;
-            m_ant_bpwr_simulator._cb.cadence_sensorsim_state.current_val = (uint32_t)CADENCE;
-
-            //ant_bsc_simulator_increment(&m_ant_bsc_simulator);
-            m_ant_bsc_simulator._cb.sensorsim_s_state.current_val = (uint32_t)SPEED;
 
             ret_code_t err_code = app_timer_stop(m_idle_timer_id);
             APP_ERROR_CHECK(err_code);
@@ -410,11 +521,39 @@ void bsp_evt_handler(bsp_event_t event)
             err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
             APP_ERROR_CHECK(err_code);
             break;
+            */
 
         default:
             break;
     }
 }
+
+/**@brief Fake pedalling function trigger for debugging.
+ */
+/*
+static void fake_pedal_timer_handler(void * p_context)
+{
+    uint32_t ctime = 0;
+    
+    nrf_pwr_mgmt_feed();
+
+    m_pin_hldr_counter++;
+    ctime = app_timer_cnt_get();
+
+    NRF_LOG_RAW_INFO("%d: hall effect triggered %d, %d\n", NRF_RTC1->COUNTER, \
+        ctime, m_pin_hldr_counter);
+    //if (ctime == 0) { NRF_LOG_INFO("ctime zero %d, RTC1 counter %d", ctime, NRF_RTC1->COUNTER); }
+
+    m_cadence_counter[m_cadence_position] = ctime;
+    m_cadence_position = (m_cadence_position + 1) % 3;
+    if (m_pin_hldr_counter > 1) {
+        CADENCE = CADENCE_NUMERATOR / \
+            app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+        gear_cad_to_pwr_spd();
+    }
+}
+*/
+
 /** @snippet [ANT BPWR simulator button] */
 
 /**@brief Function for handling ANT BPWR events.
@@ -493,6 +632,14 @@ void ant_bsc_evt_handler(ant_bsc_profile_t * p_profile, ant_bsc_evt_t event)
 /** @snippet [ANT BPWR calibration] */
 void ant_bpwr_calib_handler(ant_bpwr_profile_t * p_profile, ant_bpwr_page1_data_t * p_page1)
 {
+    uint32_t ctime = 0, stime = 0;
+    
+    ctime = app_timer_cnt_get();
+    stime = floor(ctime/APP_TIMER_TICKS(1000));
+
+    NRF_LOG_RAW_INFO("%d.%ds: calibration called\n", stime, \
+        (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1));
+
     switch (p_page1->calibration_id)
     {
         case ANT_BPWR_CALIB_ID_MANUAL:
@@ -527,35 +674,51 @@ void ant_bpwr_calib_handler(ant_bpwr_profile_t * p_profile, ant_bpwr_page1_data_
 static void idle_timer_handler(void * p_context)
 {
     uint32_t ctime = 0;
+    uint32_t tmp = 0;
     int8_t p_pos = 0;
 
+    ret_code_t err_code;
+
     if (m_pin_hldr_counter_last == m_pin_hldr_counter) {
-        if (m_idle_timer_ctr == 4) {
+        NRF_LOG_RAW_INFO("%ds: idle triggered %d\n", \
+            (NRF_RTC1->COUNTER) / APP_TIMER_TICKS(1000), m_idle_timer_ctr);
+        if (m_idle_timer_ctr == 3) {
             m_pin_hldr_counter = 0;
             m_pin_hldr_counter_last = 0;
-            memset(m_cadence_counter, 0, sizeof(m_cadence_counter));
+            memset(m_cadence_counter, 0, sizeof(uint32_t) * 3);
             m_cadence_position = 0;
             CADENCE = 0;
             m_idle_timer_ctr = 0;
+            err_code = app_timer_stop(m_idle_timer_id);
+            APP_ERROR_CHECK(err_code);
         } else {
             m_idle_timer_ctr++;
             // do decrement cadence to compensate
             ctime = app_timer_cnt_get();
+            if (ctime == 0) { NRF_LOG_INFO("ctime zero %d, RTC1 counter %d", ctime, NRF_RTC1->COUNTER); }
             p_pos = (m_cadence_position + 5) % 3;
             if (m_cadence_counter[p_pos]) {
                 m_cadence_counter[p_pos] = ctime;
-                CADENCE = CADENCE_NUMERATOR / \
-                    app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+                tmp = app_timer_cnt_diff_compute(ctime, m_cadence_counter[m_cadence_position]);
+                NRF_LOG_RAW_INFO("idle timer rtc diff %d\n", tmp);
+                CADENCE = CADENCE_NUMERATOR / tmp;
             }
+            err_code = app_timer_stop(m_idle_timer_id);
+            APP_ERROR_CHECK(err_code);
+
+            err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
+            APP_ERROR_CHECK(err_code);
         }
+        gear_cad_to_pwr_spd();
     } else {
         m_pin_hldr_counter_last = m_pin_hldr_counter;
-    }
-    ret_code_t err_code = app_timer_stop(m_idle_timer_id);
-    APP_ERROR_CHECK(err_code);
+        m_idle_timer_ctr = 0;
+        err_code = app_timer_stop(m_idle_timer_id);
+        APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
-    APP_ERROR_CHECK(err_code);
+        err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
+        APP_ERROR_CHECK(err_code);
+    }
 }
 
 /**
@@ -574,14 +737,18 @@ static void utils_setup(void)
     err_code = nrf_pwr_mgmt_init();
     APP_ERROR_CHECK(err_code);
 
+    
+    //err_code = bsp_init(BSP_INIT_LEDS, bsp_evt_handler);
     //err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_evt_handler);
-    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_evt_handler);
-    APP_ERROR_CHECK(err_code);
-
+    //APP_ERROR_CHECK(err_code);
+    /*
     err_code = bsp_event_to_button_action_assign(HALL_EFFECT_BTN,
                                                  BSP_BUTTON_ACTION_PUSH,
                                                  BSP_EVENT_KEY_1);
     APP_ERROR_CHECK(err_code);
+    */
+
+    gpio_init();
 
     err_code = ant_state_indicator_init(m_ant_bpwr.channel_number, BPWR_SENS_CHANNEL_TYPE);
     APP_ERROR_CHECK(err_code);
@@ -595,8 +762,20 @@ static void utils_setup(void)
                                 idle_timer_handler);
     APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(m_idle_timer_id, APP_TIMER_TICKS(1000), NULL);
+    err_code = app_timer_create(&m_cadence_timer_id,
+                                APP_TIMER_MODE_SINGLE_SHOT,
+                                cadence_timer_handler);
     APP_ERROR_CHECK(err_code);
+
+/*
+    err_code = app_timer_create(&m_fake_pedal_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                fake_pedal_timer_handler);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_start(m_fake_pedal_timer_id, APP_TIMER_TICKS(700), NULL);
+    APP_ERROR_CHECK(err_code);
+*/
 }
 
 /**
@@ -656,6 +835,8 @@ static void softdevice_setup(void)
 
     err_code = ant_plus_key_set(ANTPLUS_NETWORK_NUM);
     APP_ERROR_CHECK(err_code);
+
+    sd_clock_hfclk_request();
 }
 
 /**
@@ -728,8 +909,8 @@ void saadc_sampling_event_init(void)
     err_code = nrf_drv_timer_init(&m_timer, &timer_cfg, timer_handler);
     APP_ERROR_CHECK(err_code);
 
-    /* setup m_timer for compare event every 250ms */
-    uint32_t ticks = nrf_drv_timer_ms_to_ticks(&m_timer, 250);
+    /* setup m_timer for compare event every 125ms */
+    uint32_t ticks = nrf_drv_timer_ms_to_ticks(&m_timer, 125);
     nrf_drv_timer_extended_compare(&m_timer,
                                    NRF_TIMER_CC_CHANNEL0,
                                    ticks,
@@ -769,28 +950,36 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
         int         avg = 0;
         int         tmp = 0;
         int         i;
+        uint32_t ctime = 0, stime = 0;
 
         for (i = 0; i < SAMPLES_IN_BUFFER; i++)
         {
             tmp = (uint16_t)p_event->data.done.p_buffer[i] >> 2; // get 10 bit resolution from 12 bit saadc
+            if (tmp < 0) { tmp = 0; }
             avg += tmp;
         }
 
-        tmp = (int)avg/SAMPLES_IN_BUFFER - 350; // pot minimal offset value
-        if (tmp > 562) { tmp = 563; } // maximum setting
-        else if (tmp < 0) { tmp = 0; }
+        tmp = (int)avg/SAMPLES_IN_BUFFER - ADC_LOW; // pot minimal offset value
+        //if (tmp < ADC_LOW) { ADC_LOW = (uint16_t)tmp; NRF_LOG_INFO("new adc low: %d", ADC_LOW); }
+        //else if (tmp > ADC_HIGH) { ADC_HIGH = (uint16_t)tmp; NRF_LOG_INFO("new adc high: %d", ADC_HIGH); }
+
+        if (tmp < 0) { tmp = 0; }
+        if (tmp > ADC_HIGH) { tmp = ADC_HIGH; } // this is MAX for gear 24
 
         //tmp_gear = gear_selecta(tmp);
         //if (tmp_gear) { GEAR = tmp_gear; }
 
-        GEAR = (uint8_t)((tmp / 24.0) + 1); // linear mapping
-
+        //GEAR = (uint8_t)(tmp / (ADC_HIGH / 24.0)) + 1;
+        GEAR = gear_selecta(tmp);
         gear_cad_to_pwr_spd();
-#if DEBUG
-        NRF_LOG_INFO("ADC: %d, GEAR: %d, CADENCE: %d", tmp, GEAR, CADENCE);
-        NRF_LOG_INFO("POWER: %d, SPEED: " NRF_LOG_FLOAT_MARKER "", \
-            POWER, NRF_LOG_FLOAT(SPEED));
-#endif
+
+        ctime = app_timer_cnt_get();
+        stime = floor(ctime/APP_TIMER_TICKS(1000));
+        NRF_LOG_RAW_INFO("%d.%ds: ADC: %d, GEAR: %d, CADENCE: %d, ", stime, \
+            (ctime - (stime * APP_TIMER_TICKS(1000))) / APP_TIMER_TICKS(1), \
+            tmp, GEAR, CADENCE);
+        NRF_LOG_RAW_INFO("POWER: %d, SPEED: " NRF_LOG_FLOAT_MARKER "\n", POWER, NRF_LOG_FLOAT(SPEED));
+        
         m_adc_evt_counter++;
     }
 }
